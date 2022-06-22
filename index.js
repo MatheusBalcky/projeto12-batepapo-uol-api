@@ -7,7 +7,6 @@ import Joi from 'joi';
 import { MongoClient } from 'mongodb';
 
 // & SERVER CONFIG 
-
 const server = express();
 server.use(express.json(), cors());
 
@@ -105,7 +104,6 @@ server.post('/messages', (req, res) =>{
 
 
 // & SCHEMA'S VALIDATION
-
 const nameSchema = Joi.object({
     name: Joi.string().min(3).required(),
 });
