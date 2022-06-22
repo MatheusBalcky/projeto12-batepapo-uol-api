@@ -15,7 +15,7 @@ const client = new MongoClient(process.env.MONGO_URI);
 let db;
 client.connect().then( () => db = client.db("test") )
 
-
+let user;
 
 
 
@@ -44,10 +44,11 @@ server.post('/participants', (req, res) =>{
             res.status(409).send('Nome já existente tente outro por favor!')
             return
         } else {
-            const lastStatus = '';
+            user = req.body.name;
+            const lastStatus = Date.now();
             const userDocumment = {
                 ...req.body,
-                lastStatus: Date.now(),
+                lastStatus,
             }
         
             const promiseInsert = db.collection('participants').insertOne(userDocumment);
@@ -74,7 +75,9 @@ server.post('/messages', (req, res) =>{
     const userHeader = req.headers.user; // ! POSSIVELMENTE USAR PARA VERIFICAÇÃO DPS
 
     const message = {
+        from: user,
         ...req.body,
+        time: dayjs().format('HH:mm:ss'),
     };
     
     const promiseInsertMessage = db.collection('messages').insertOne(message);
