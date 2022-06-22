@@ -47,7 +47,7 @@ server.post('/participants', (req, res) =>{
             const lastStatus = '';
             const userDocumment = {
                 ...req.body,
-                lastStatus,
+                lastStatus: Date.now(),
             }
         
             const promiseInsert = db.collection('participants').insertOne(userDocumment);
