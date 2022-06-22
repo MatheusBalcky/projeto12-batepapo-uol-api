@@ -20,11 +20,11 @@ let user;
 
 
 server.get('/participants', (req, res) =>{
-    const promiseParticipants = db.collection(participants).find();
+    const promiseParticipants = db.collection('participants').find().toArray();
 
     promiseParticipants
-    .then( participants => res.send(participants))
-    .catch( res.send('Connection Error'));
+    .then( participants => res.status(200).send(participants) )
+    .catch( res.status(500));
 })
 
 
@@ -82,7 +82,7 @@ server.post('/messages', (req, res) =>{
     
     const promiseInsertMessage = db.collection('messages').insertOne(message);
     promiseInsertMessage.then( () => { 
-        res.status(201).send('created');
+        res.status(201)
         console.log('Message sended to API')
     })
 });
