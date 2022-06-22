@@ -50,10 +50,24 @@ server.post('/participants', (req, res) =>{
                 ...req.body,
                 lastStatus,
             }
-        
             const promiseInsert = db.collection('participants').insertOne(userDocumment);
-            promiseInsert.then( () => {
-                res.status(201).send('created'); console.log('User Logged')
+
+            const messageLogin = {
+                from: user,
+                to: 'Todos',
+                text: 'entra na sala...',
+                type: 'status',
+                time: dayjs().format('HH:mm:ss'),
+            };
+
+            const promiseMessageLogin = db.collection('messages').insertOne(messageLogin);
+
+            Promise.all([promiseInsert,promiseMessageLogin])
+            .then( (values) => {
+                res.status(200).send('Ok')
+            })
+            .catch( () =>{
+                res.status(401).send('Error')
             })
         }
 
