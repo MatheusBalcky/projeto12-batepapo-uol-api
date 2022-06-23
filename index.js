@@ -16,8 +16,6 @@ client.connect().then( () => db = client.db("test") )
 
 let user;
 
-
-
 server.get('/participants', (req, res) =>{
     const promiseParticipants = db.collection('participants').find().toArray();
 
@@ -84,7 +82,7 @@ server.get('/messages', (req, res) =>{
 })
 
 
-server.post('/messages', (req, res) =>{
+server.post('/messages', async (req, res) =>{
     const userHeader = req.headers.user; // ! POSSIVELMENTE USAR PARA VERIFICAÇÃO DPS
 
     const message = {
@@ -92,14 +90,23 @@ server.post('/messages', (req, res) =>{
         ...req.body,
         time: dayjs().format('HH:mm:ss'),
     };
-    
-    const promiseInsertMessage = db.collection('messages').insertOne(message);
-    promiseInsertMessage.then( () => { 
-        res.status(201)
-        console.log('Message sended to API')
-    })
-});
 
+    const verifyFrom = await db.collection('participants').find({ name: user }).toArray();
+    const { error, value } = messageSchema.validate(message)
+   
+    if(verifyFrom.length > 0 || error || user === undefined){
+        res.status(422).send('Unprocessable Entity'); return
+    }
+
+    res.status(200).send('ok')
+
+    // ! DESCOMENTAR AQ PARA FUNCIONAR
+    // const promiseInsertMessage = db.collection('messages').insertOne(message);
+    // promiseInsertMessage.then( () => { 
+    //     res.status(201)
+    //     console.log('Message sended to API')
+    // })
+});
 
 
 
@@ -107,6 +114,14 @@ server.post('/messages', (req, res) =>{
 const nameSchema = Joi.object({
     name: Joi.string().min(3).required(),
 });
+
+const messageSchema = Joi.object({
+    from: Joi.string(),
+    to: Joi.string().min(3),
+    text: Joi.string(),
+    type: Joi.string().valid('message', 'private_message'),
+    time: Joi.any()
+})
 
 
 
