@@ -80,8 +80,6 @@ server.post('/participants', (req, res) =>{
 });
 
 
-
-
 server.get('/messages', async (req, res) =>{
     const { user } = req.headers;
     const { limit } = req.query;
@@ -104,7 +102,7 @@ server.get('/messages', async (req, res) =>{
             const messagesWithLimit = [];
 
             for (let i = promiseMessages.length - 1; ; i--){
-                
+
                 messagesWithLimit.push(promiseMessages[i]);
                 
                 if (messagesWithLimit.length === parseInt(limit) || i ===  0){
@@ -153,6 +151,30 @@ server.post('/messages', async (req, res) =>{
     }
 });
 
+server.post('/status', async (req, res) =>{
+    const { user } = req.headers;
+  
+    try {
+        const userOnline = await db.collection('participants').find({ name: user }).toArray();
+    
+        if(userOnline.length > 0){
+            
+            await db.collection('participants').updateOne({
+                name: user
+            },{
+                $set: { lastStatus: Date.now() }
+            });
+
+            res.sendStatus(200);
+            return;
+        }
+
+        throw new Error('Usuário não se encontra como participante do chat');
+    } catch (error) {
+        res.status(404).send(`${error}`)
+    }
+
+})
 
 
 
