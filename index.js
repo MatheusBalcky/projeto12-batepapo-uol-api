@@ -95,13 +95,29 @@ server.get('/messages', async (req, res) =>{
             ]
         }).toArray();
 
-        console.log(promiseMessages.length);
+        console.log(promiseMessages.length, ' tamanho mensagem sem limit');
 
         // & FILTRAR COM O LIMIT SE HOUVER AGORA
-        if(limit){ // ! EXISTE UM LIMIT DE 50 MENSAGENS NO SCRIPT DO APP
-            
-        }
 
+        if(limit){
+            console.log('Entrou na condição com: ', promiseMessages.length, 'E limit: ', limit)
+            const messagesWithLimit = [];
+
+            for (let i = promiseMessages.length - 1; ; i--){
+                
+                messagesWithLimit.push(promiseMessages[i]);
+                
+                if (messagesWithLimit.length === parseInt(limit) || i ===  0){
+                    break
+                };
+                
+            }
+
+            messagesWithLimit.reverse()
+            res.status(200).send(messagesWithLimit);
+            return
+        }
+        console.log('test dps do if')
         res.status(200).send(promiseMessages);
 
     } catch (error) {
