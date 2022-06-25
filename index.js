@@ -4,7 +4,7 @@ import dotenv from 'dotenv'; dotenv.config();
 import chalk from 'chalk';
 import dayjs from 'dayjs';
 import Joi from 'joi';
-import { MongoClient } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 
 // & SERVER CONFIG 
 const server = express();
@@ -14,7 +14,12 @@ const client = new MongoClient(process.env.MONGO_URI);
 let db;
 client.connect().then( () => db = client.db("test") )
 
-let user;
+let user = 'test';
+
+
+
+
+
 
 server.get('/participants', (req, res) =>{
     const promiseParticipants = db.collection('participants').find().toArray();
@@ -26,13 +31,15 @@ server.get('/participants', (req, res) =>{
 
 
 server.post('/participants', (req, res) =>{
+    const { name } = req.body
     const { error } = nameSchema.validate(req.body);
+    
     if(error){
         return res.status(422).send('Preencha o campo nome corretamente!')
     };
 
 
-    const ifAlreadyExist = db.collection('participants').find(req.body).toArray();
+    const ifAlreadyExist = db.collection('participants').find({ name }).toArray();
     ifAlreadyExist
     .then( response => {
 
@@ -73,40 +80,66 @@ server.post('/participants', (req, res) =>{
 });
 
 
-server.get('/messages', (req, res) =>{
-    const promiseMessages = db.collection(messages).find();
 
-    promiseMessages
-    .then( messages => res.send(messages))
-    .catch( res.send('Connection Error'));
+
+server.get('/messages', async (req, res) =>{
+    const { user } = req.headers;
+    const { limit } = req.query;
+
+    try {
+        const promiseMessages =  await db.collection('messages').find({
+            $or:[ 
+                { type: 'status'  }, { type: 'message'  }, // * RETORNA O DOCUMENTO EM QUE A MENSAGEM É PARA TODOS
+                { to: user}, // * RETORNA O DOCUMENTO COM A MENSAGEM PRIVADA QUE MANDARAM PARA O USER
+                { from: user } // * RETORNA O DOCUMENTO COM A MENSAGEM PRIVADA QUE O USER MANDOU
+            ]
+        }).toArray();
+
+        console.log(promiseMessages.length);
+
+        // & FILTRAR COM O LIMIT SE HOUVER AGORA
+        if(limit){ // ! EXISTE UM LIMIT DE 50 MENSAGENS NO SCRIPT DO APP
+            
+        }
+
+        res.status(200).send(promiseMessages);
+
+    } catch (error) {
+        res.sendStatus(400)
+
+        console.log(chalk.red(error))
+    }
+
 })
 
 
 server.post('/messages', async (req, res) =>{
     const userHeader = req.headers.user; // ! POSSIVELMENTE USAR PARA VERIFICAÇÃO DPS
-
+    user = userHeader;
     const message = {
         from: user,
         ...req.body,
         time: dayjs().format('HH:mm:ss'),
     };
 
-    const verifyFrom = await db.collection('participants').find({ name: user }).toArray();
-    const { error, value } = messageSchema.validate(message)
-   
-    if(verifyFrom.length > 0 || error || user === undefined){
-        res.status(422).send('Unprocessable Entity'); return
+    try {
+        const verifyFrom = await db.collection('participants').find({ name: user }).toArray();
+        if (verifyFrom.length === 0) throw new Error('Usuário não se encontra como participante do chat');
+
+        const { error, value } =  await messageSchema.validateAsync(message);
+        
+        const promiseInsertMessage = await db.collection('messages').insertOne(message);
+        res.sendStatus(201);
+
+        console.log(chalk.green('Message sended to API'));
+    } catch (error) {
+        res.status(422).send(`${error}`);
     }
-
-    res.status(200).send('ok')
-
-    // ! DESCOMENTAR AQ PARA FUNCIONAR
-    // const promiseInsertMessage = db.collection('messages').insertOne(message);
-    // promiseInsertMessage.then( () => { 
-    //     res.status(201)
-    //     console.log('Message sended to API')
-    // })
 });
+
+
+
+
 
 
 
