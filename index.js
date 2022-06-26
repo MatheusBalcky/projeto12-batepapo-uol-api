@@ -21,12 +21,15 @@ let user = 'test';
 
 
 
-server.get('/participants', (req, res) =>{
-    const promiseParticipants = db.collection('participants').find().toArray();
+server.get('/participants', async (req, res) =>{
+    try {
+        const participants = await db.collection('participants').find().toArray();
+        res.status(200).send(participants);
 
-    promiseParticipants
-    .then( participants => res.status(200).send(participants) )
-    .catch( res.status(500));
+    } catch (error) {
+        console.log(chalk.bgRed(error));
+    }
+
 })
 
 
@@ -44,7 +47,6 @@ server.post('/participants', (req, res) =>{
     .then( response => {
 
         if(response.length > 0){
-            console.log('aq')
             res.status(409).send('Nome já existente tente outro por favor!')
             return
         } else {
@@ -93,12 +95,7 @@ server.get('/messages', async (req, res) =>{
             ]
         }).toArray();
 
-        console.log(promiseMessages.length, ' tamanho mensagem sem limit');
-
-        // & FILTRAR COM O LIMIT SE HOUVER AGORA
-
         if(limit){
-            console.log('Entrou na condição com: ', promiseMessages.length, 'E limit: ', limit)
             const messagesWithLimit = [];
 
             for (let i = promiseMessages.length - 1; ; i--){
@@ -115,15 +112,12 @@ server.get('/messages', async (req, res) =>{
             res.status(200).send(messagesWithLimit);
             return
         }
-        console.log('test dps do if')
         res.status(200).send(promiseMessages);
 
     } catch (error) {
         res.sendStatus(400)
-
         console.log(chalk.red(error))
     }
-
 })
 
 
@@ -174,8 +168,41 @@ server.post('/status', async (req, res) =>{
         res.status(404).send(`${error}`)
     }
 
-})
+});
 
+
+function deleteParticipantsInatived (){
+    setInterval( async ()=>{
+
+        try {
+            const participants = await db.collection('participants').find().toArray();
+        
+            for(let i = 0; i < participants.length; i++){
+                let currentTime = Date.now() / 1000;
+
+                const secondsPassed = participants[i].lastStatus / 1000;
+
+                if(currentTime - secondsPassed > 10){
+                    const userToRemove = participants[i]._id;
+                    await db.collection('participants').deleteOne({ _id: userToRemove });
+                    await db.collection('messages').insertOne({
+                        from: participants[i].name,
+                        to: 'Todos',
+                        text: 'sai da sala...',
+                        type: 'status',
+                        time: dayjs().format('HH:mm:ss')
+                    });
+                }
+            }
+        } catch (error) {
+            res.send(`${error}`)
+            console.log(error)
+        }
+    },14500);
+}
+
+
+deleteParticipantsInatived();
 
 
 
